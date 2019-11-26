@@ -50,25 +50,43 @@ namespace MiddlewareSample
         {
             // https://www.devtrends.co.uk/blog/conditional-middleware-based-on-request-in-asp.net-core
             // https://thomaslevesque.com/2018/03/27/understanding-the-asp-net-core-middleware-pipeline/
-            app.UseMiddleware<LanguageMiddleware>();
+            app.UseLanguage();
 
-            app.UseWhen(
-                context => context.Request.Path.StartsWithSegments(new PathString("/foo")),
+            // provede pouze pokud je v URL obsaženo "/api", funguje to jako taková "vsuvka" mezi ostatní middlewary           
+            app.UseWhen(context => context.Request.Path.StartsWithSegments(new PathString("/api")),a => 
+            {
+                a.UseToken();
+            });
+            
+            app.MapWhen(context => context.Request.Path.StartsWithSegments(new PathString("/foo")),
                 a => a.Use(async (context, next) =>
                 {
-                    Console.WriteLine("B (before)");
+                    Console.WriteLine("1. Start foo...");
+                    
+                    context.Response.Headers.Add("Content-Type", "text/html");
+                    await context.Response.WriteAsync($"Tady je FOO {CultureInfo.CurrentCulture.DisplayName}");
+                    await context.Response.WriteAsync($"<br/><a href='/api/'>API</a>");
+                    await context.Response.WriteAsync($"<br/><a href='/'>Home</a>");
+                    
                     await next();
-                    Console.WriteLine("B (after)");
+                    Console.WriteLine("1. Stop foo.");
                 }));
             
-            app.UseMiddleware<TokenMiddleware>(); 
-
+            app.MapWhen(context => context.Request.Path.StartsWithSegments(new PathString("/foo")),
+                a => a.Use(async (context, next) =>
+                {
+                    Console.WriteLine("2. Start foo...");
+                    
+                    await next();
+                    Console.WriteLine("2. Stop foo.");
+                }));
+            
             app.Run(async (context) =>
             {
                 context.Response.Headers.Add("Content-Type", "text/html");
                 await context.Response.WriteAsync($"Nazdar {CultureInfo.CurrentCulture.DisplayName}");
-                await context.Response.WriteAsync($"<br/><a href='api/'>API</a>");
-                await context.Response.WriteAsync($"<br/><a href='foo/'>FOO</a>");
+                await context.Response.WriteAsync($"<br/><a href='/api/'>API</a>");
+                await context.Response.WriteAsync($"<br/><a href='/foo/'>FOO</a>");
             });
         }
     }

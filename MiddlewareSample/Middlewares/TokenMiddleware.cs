@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -25,6 +26,7 @@ namespace MiddlewareSample.Middlewares
         /// <returns></returns>
         public async Task InvokeAsync(HttpContext context, ITokenValidator tokenValidator)
         {
+            Console.WriteLine("Start token...");
             var token = context.Request.Headers["token"];
             if (!string.IsNullOrEmpty(token))
             {
